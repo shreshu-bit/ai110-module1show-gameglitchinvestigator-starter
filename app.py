@@ -1,6 +1,9 @@
 import random
 import streamlit as st
 
+# FIX: Moved check_guess into logic_utils.py with Claude (agent mode) and import it here.
+from logic_utils import check_guess, new_game_state
+
 def get_range_for_difficulty(difficulty: str):
     if difficulty == "Easy":
         return 1, 20
@@ -27,24 +30,6 @@ def parse_guess(raw: str):
         return False, None, "That is not a number."
 
     return True, value, None
-
-
-def check_guess(guess, secret):
-    if guess == secret:
-        return "Win", "🎉 Correct!"
-
-    try:
-        if guess > secret:
-            return "Too High", "📈 Go HIGHER!"
-        else:
-            return "Too Low", "📉 Go LOWER!"
-    except TypeError:
-        g = str(guess)
-        if g == secret:
-            return "Win", "🎉 Correct!"
-        if g > secret:
-            return "Too High", "📈 Go HIGHER!"
-        return "Too Low", "📉 Go LOWER!"
 
 
 def update_score(current_score: int, outcome: str, attempt_number: int):
@@ -104,6 +89,12 @@ if "status" not in st.session_state:
 if "history" not in st.session_state:
     st.session_state.history = []
 
+# FIX: Added an input_nonce with Claude (agent mode) so the guess box can be
+# reset by changing its widget key (Streamlit forbids editing a widget's value
+# after it renders). Bumped on win/loss/New Game to clear the stale guess.
+if "input_nonce" not in st.session_state:
+    st.session_state.input_nonce = 0
+
 st.subheader("Make a guess")
 
 st.info(
@@ -120,7 +111,9 @@ with st.expander("Developer Debug Info"):
 
 raw_guess = st.text_input(
     "Enter your guess:",
-    key=f"guess_input_{difficulty}"
+    # FIX: Keyed the input on input_nonce with Claude (agent mode); a changed
+    # key makes Streamlit build a fresh, empty box once the game ends.
+    key=f"guess_input_{difficulty}_{st.session_state.input_nonce}"
 )
 
 col1, col2, col3 = st.columns(3)
@@ -132,8 +125,12 @@ with col3:
     show_hint = st.checkbox("Show hint", value=True)
 
 if new_game:
-    st.session_state.attempts = 0
-    st.session_state.secret = random.randint(1, 100)
+    # FIX: Fixed the "New Game stuck" bug with Claude (agent mode). The old
+    # handler only reset attempts/secret, leaving status="won"/"lost" (so the
+    # next render hit st.stop()) and stale history, and hardcoded range 1-100.
+    # Now delegates to new_game_state() and bumps input_nonce to clear the box.
+    st.session_state.update(new_game_state(low, high))
+    st.session_state.input_nonce += 1
     st.success("New game started.")
     st.rerun()
 
@@ -174,6 +171,8 @@ if submit:
         if outcome == "Win":
             st.balloons()
             st.session_state.status = "won"
+            # FIX: Bump input_nonce with Claude (agent mode) to clear the box on win.
+            st.session_state.input_nonce += 1
             st.success(
                 f"You won! The secret was {st.session_state.secret}. "
                 f"Final score: {st.session_state.score}"
@@ -181,6 +180,8 @@ if submit:
         else:
             if st.session_state.attempts >= attempt_limit:
                 st.session_state.status = "lost"
+                # FIX: Bump input_nonce with Claude (agent mode) to clear the box when attempts run out.
+                st.session_state.input_nonce += 1
                 st.error(
                     f"Out of attempts! "
                     f"The secret was {st.session_state.secret}. "
