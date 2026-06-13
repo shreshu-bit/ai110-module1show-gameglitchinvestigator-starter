@@ -1,4 +1,9 @@
-from logic_utils import check_guess, new_game_state, guess_proximity
+from logic_utils import (
+    check_guess,
+    new_game_state,
+    guess_proximity,
+    parse_guess,
+)
 
 
 def test_winning_guess():
@@ -119,3 +124,53 @@ def test_proximity_is_normalized_to_range():
     _, narrow, _ = guess_proximity(5, 15, 1, 20)
     _, wide, _ = guess_proximity(5, 15, 1, 100)
     assert wide > narrow
+
+
+# --- Challenge 1: Advanced edge-case testing for parse_guess ---
+# These target the messy inputs a text box can actually produce, not just the
+# happy path. parse_guess must never raise on bad input -- it returns a
+# (ok, value, error) tuple so app.py can show a friendly message instead.
+
+def test_parse_guess_empty_string_is_rejected():
+    ok, value, error = parse_guess("")
+    assert ok is False
+    assert value is None
+    assert error == "Enter a guess."
+
+
+def test_parse_guess_none_is_rejected():
+    # Streamlit can hand back None before the widget has a value.
+    ok, value, error = parse_guess(None)
+    assert ok is False
+    assert value is None
+    assert error == "Enter a guess."
+
+
+def test_parse_guess_non_numeric_text_is_rejected_without_raising():
+    ok, value, error = parse_guess("fifty")
+    assert ok is False
+    assert value is None
+    assert error == "That is not a number."
+
+
+def test_parse_guess_accepts_negative_numbers():
+    # int("-5") is valid; range-checking is the caller's job, not the parser's.
+    ok, value, error = parse_guess("-5")
+    assert ok is True
+    assert value == -5
+    assert error is None
+
+
+def test_parse_guess_truncates_decimal_strings():
+    # "3.9" should parse to 3, not raise on the int() call.
+    ok, value, error = parse_guess("3.9")
+    assert ok is True
+    assert value == 3
+    assert error is None
+
+
+def test_parse_guess_whitespace_only_is_rejected():
+    ok, value, error = parse_guess("   ")
+    assert ok is False
+    assert value is None
+    assert error == "That is not a number."

@@ -3,52 +3,17 @@ import streamlit as st
 
 # FIX: Moved check_guess into logic_utils.py with Claude (agent mode) and import it here.
 # FEATURE (Challenge 2): guess_proximity powers the Guess History sidebar.
-from logic_utils import check_guess, new_game_state, guess_proximity
-
-def get_range_for_difficulty(difficulty: str):
-    if difficulty == "Easy":
-        return 1, 20
-    if difficulty == "Normal":
-        return 1, 100
-    if difficulty == "Hard":
-        return 1, 50
-    return 1, 100
-
-
-def parse_guess(raw: str):
-    if raw is None:
-        return False, None, "Enter a guess."
-
-    if raw == "":
-        return False, None, "Enter a guess."
-
-    try:
-        if "." in raw:
-            value = int(float(raw))
-        else:
-            value = int(raw)
-    except Exception:
-        return False, None, "That is not a number."
-
-    return True, value, None
-
-
-def update_score(current_score: int, outcome: str, attempt_number: int):
-    if outcome == "Win":
-        points = 100 - 10 * (attempt_number + 1)
-        if points < 10:
-            points = 10
-        return current_score + points
-
-    if outcome == "Too High":
-        if attempt_number % 2 == 0:
-            return current_score + 5
-        return current_score - 5
-
-    if outcome == "Too Low":
-        return current_score - 5
-
-    return current_score
+# REFACTOR (Challenge 3): get_range_for_difficulty, parse_guess and update_score
+# now live in logic_utils.py (single source of truth + unit-testable) instead of
+# being duplicated here in app.py.
+from logic_utils import (
+    check_guess,
+    new_game_state,
+    guess_proximity,
+    get_range_for_difficulty,
+    parse_guess,
+    update_score,
+)
 
 st.set_page_config(page_title="Glitchy Guesser", page_icon="🎮")
 
@@ -96,6 +61,7 @@ if "history" not in st.session_state:
 if "input_nonce" not in st.session_state:
     st.session_state.input_nonce = 0
 
+
 # FEATURE (Challenge 2): Guess History sidebar. For each past guess, show its
 # value, a hot/cold closeness label + bar, and which way to move next. Invalid
 # (non-number) guesses are flagged instead of scored.
@@ -121,10 +87,47 @@ def render_guess_history():
     else:
         st.sidebar.caption("No guesses yet. Make your first guess!")
 
+
+# FEATURE (Challenge 4): Enhanced UI — a structured Session Summary table in the
+# main area. Turns the raw history list into a readable recap (attempt number,
+# guess, result, and hot/cold proximity) so the player can review the whole game
+# at a glance instead of scrolling the sidebar. Like the sidebar, it's rendered
+# AFTER the submit handler so the latest guess appears immediately.
+def render_session_summary():
+    if not st.session_state.history:
+        return
+    rows = []
+    for i, past_guess in enumerate(st.session_state.history, start=1):
+        if isinstance(past_guess, int):
+            outcome, _ = check_guess(past_guess, st.session_state.secret)
+            label, _, _ = guess_proximity(
+                past_guess, st.session_state.secret, low, high
+            )
+            rows.append(
+                {
+                    "Attempt": i,
+                    "Guess": str(past_guess),
+                    "Result": outcome,
+                    "Proximity": label,
+                }
+            )
+        else:
+            rows.append(
+                {
+                    "Attempt": i,
+                    "Guess": str(past_guess),
+                    "Result": "⚠️ Invalid",
+                    "Proximity": "—",
+                }
+            )
+    st.subheader("📊 Session Summary")
+    st.table(rows)
+
+
 st.subheader("Make a guess")
 
 st.info(
-    f"Guess a number between 1 and 100. "
+    f"Guess a number between {low} and {high}. "
     f"Attempts left: {attempt_limit - st.session_state.attempts}"
 )
 
@@ -168,6 +171,7 @@ if st.session_state.status != "playing":
         st.success("You already won. Start a new game to play again.")
     else:
         st.error("Game over. Start a new game to try again.")
+    render_session_summary()
     st.stop()
 
 if submit:
@@ -209,7 +213,7 @@ if submit:
         else:
             if st.session_state.attempts >= attempt_limit:
                 st.session_state.status = "lost"
-                # FIX: Bump input_nonce with Claude (agent mode) to clear the box when attempts run out.
+                # FIX: Bump input_nonce (Claude) to clear the box when out of attempts.
                 st.session_state.input_nonce += 1
                 st.error(
                     f"Out of attempts! "
@@ -217,9 +221,11 @@ if submit:
                     f"Score: {st.session_state.score}"
                 )
 
-# Render the sidebar history AFTER the submit handler above has appended the
-# new guess, so a guess shows up on the same click instead of one click late.
+# Render the sidebar history AND the main-area summary table AFTER the submit
+# handler above has appended the new guess, so a guess shows up on the same click
+# instead of one click late.
 render_guess_history()
+render_session_summary()
 
 st.divider()
 st.caption("Built by an AI that claims this code is production-ready.")

@@ -21,18 +21,53 @@ def new_game_state(low, high, rng=None):
     }
 
 
-def get_range_for_difficulty(difficulty: str):
-    """Return (low, high) inclusive range for a given difficulty."""
-    raise NotImplementedError("Refactor this function from app.py into logic_utils.py")
+def get_range_for_difficulty(difficulty):
+    """Return the inclusive ``(low, high)`` guess range for a difficulty.
 
+    Args:
+        difficulty: One of ``"Easy"``, ``"Normal"``, or ``"Hard"``.
 
-def parse_guess(raw: str):
+    Returns:
+        A ``(low, high)`` tuple: ``"Easy"`` -> ``(1, 20)``,
+        ``"Normal"`` -> ``(1, 100)``, ``"Hard"`` -> ``(1, 50)``. Any
+        unrecognized value falls back to ``(1, 100)``.
     """
-    Parse user input into an int guess.
+    if difficulty == "Easy":
+        return 1, 20
+    if difficulty == "Normal":
+        return 1, 100
+    if difficulty == "Hard":
+        return 1, 50
+    return 1, 100
 
-    Returns: (ok: bool, guess_int: int | None, error_message: str | None)
+
+def parse_guess(raw):
+    """Parse raw user input into an integer guess.
+
+    Handles the messy inputs a text box can produce: ``None``, an empty
+    string, non-numeric text, and decimal strings (truncated toward zero,
+    e.g. ``"3.9"`` -> ``3``). Negative numbers are accepted here; range
+    validation is the caller's responsibility.
+
+    Args:
+        raw: The raw string (or ``None``) from the guess input box.
+
+    Returns:
+        A ``(ok, guess_int, error_message)`` tuple. On success,
+        ``(True, <int>, None)``; on failure, ``(False, None, <message>)``.
     """
-    raise NotImplementedError("Refactor this function from app.py into logic_utils.py")
+    if raw is None or raw == "":
+        return False, None, "Enter a guess."
+
+    try:
+        if "." in raw:
+            value = int(float(raw))
+        else:
+            value = int(raw)
+    except (ValueError, TypeError):
+        return False, None, "That is not a number."
+
+    return True, value, None
 
 
 def check_guess(guess, secret):
@@ -60,9 +95,39 @@ def check_guess(guess, secret):
         return "Too Low", "📈 Go HIGHER!"
 
 
-def update_score(current_score: int, outcome: str, attempt_number: int):
-    """Update score based on outcome and attempt number."""
-    raise NotImplementedError("Refactor this function from app.py into logic_utils.py")
+def update_score(current_score, outcome, attempt_number):
+    """Return the new score after applying one guess outcome.
+
+    Scoring rules (preserved from the original game logic):
+      * ``"Win"`` awards ``100 - 10 * (attempt_number + 1)`` points, floored
+        at a minimum of 10, so winning faster is worth more.
+      * ``"Too High"`` adds 5 on even attempts and subtracts 5 otherwise.
+      * ``"Too Low"`` subtracts 5.
+      * Any other outcome leaves the score unchanged.
+
+    Args:
+        current_score: The score before this guess.
+        outcome: One of ``"Win"``, ``"Too High"``, ``"Too Low"``.
+        attempt_number: The 1-based attempt count for this guess.
+
+    Returns:
+        The updated score as an ``int``.
+    """
+    if outcome == "Win":
+        points = 100 - 10 * (attempt_number + 1)
+        if points < 10:
+            points = 10
+        return current_score + points
+
+    if outcome == "Too High":
+        if attempt_number % 2 == 0:
+            return current_score + 5
+        return current_score - 5
+
+    if outcome == "Too Low":
+        return current_score - 5
+
+    return current_score
 
 
 # FEATURE (Challenge 2): Guess History sidebar. Built agentically with Claude.
