@@ -1,4 +1,4 @@
-from logic_utils import check_guess, new_game_state
+from logic_utils import check_guess, new_game_state, guess_proximity
 
 
 def test_winning_guess():
@@ -74,3 +74,48 @@ def test_new_game_uses_difficulty_range_not_hardcoded_1_100():
 
     new_game_state(1, 50, rng=fake_randint)
     assert calls == [(1, 50)]
+
+
+# --- Challenge 2: Guess History sidebar (guess_proximity) ---
+# FEATURE: Added these tests with Claude (agent mode) to lock in the closeness
+# math that drives the new sidebar before wiring it into the UI.
+
+def test_proximity_exact_guess_is_full_closeness_and_hit():
+    label, closeness, direction = guess_proximity(50, 50, 1, 100)
+    assert closeness == 1.0
+    assert direction == "hit"
+    assert "Exact" in label
+
+
+def test_proximity_points_up_when_secret_is_higher():
+    # Guessed 40, secret is 70 -> player should go higher.
+    _, _, direction = guess_proximity(40, 70, 1, 100)
+    assert direction == "up"
+
+
+def test_proximity_points_down_when_secret_is_lower():
+    _, _, direction = guess_proximity(90, 70, 1, 100)
+    assert direction == "down"
+
+
+def test_proximity_closeness_stays_between_0_and_1():
+    # Even a guess far outside the range must not produce a negative bar value
+    # (st.sidebar.progress would crash on a value < 0).
+    _, closeness, _ = guess_proximity(1000, 50, 1, 100)
+    assert 0.0 <= closeness <= 1.0
+
+
+def test_proximity_is_symmetric_for_equal_distance():
+    # A guess 10 below and 10 above the secret are equally close.
+    _, below, _ = guess_proximity(40, 50, 1, 100)
+    _, above, _ = guess_proximity(60, 50, 1, 100)
+    assert below == above
+
+
+def test_proximity_is_normalized_to_range():
+    # Closeness is relative to the range: a distance of 10 is a big fraction of a
+    # narrow range (1-20) but a tiny fraction of a wide one (1-100), so the same
+    # absolute distance reads as *warmer* on the wider range.
+    _, narrow, _ = guess_proximity(5, 15, 1, 20)
+    _, wide, _ = guess_proximity(5, 15, 1, 100)
+    assert wide > narrow

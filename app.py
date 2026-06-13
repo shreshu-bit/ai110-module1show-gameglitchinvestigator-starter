@@ -2,7 +2,8 @@ import random
 import streamlit as st
 
 # FIX: Moved check_guess into logic_utils.py with Claude (agent mode) and import it here.
-from logic_utils import check_guess, new_game_state
+# FEATURE (Challenge 2): guess_proximity powers the Guess History sidebar.
+from logic_utils import check_guess, new_game_state, guess_proximity
 
 def get_range_for_difficulty(difficulty: str):
     if difficulty == "Easy":
@@ -95,6 +96,31 @@ if "history" not in st.session_state:
 if "input_nonce" not in st.session_state:
     st.session_state.input_nonce = 0
 
+# FEATURE (Challenge 2): Guess History sidebar. For each past guess, show its
+# value, a hot/cold closeness label + bar, and which way to move next. Invalid
+# (non-number) guesses are flagged instead of scored.
+#
+# FIX: This is defined as a function and CALLED later (after the submit handler
+# appends the guess), not rendered inline here. Streamlit reruns top-to-bottom,
+# and the guess isn't appended to history until the submit block near the bottom
+# of the file — so rendering at this point would always lag one guess behind.
+def render_guess_history():
+    st.sidebar.divider()
+    st.sidebar.subheader("Guess History 📜")
+    if st.session_state.history:
+        for i, past_guess in enumerate(st.session_state.history, start=1):
+            if isinstance(past_guess, int):
+                label, closeness, direction = guess_proximity(
+                    past_guess, st.session_state.secret, low, high
+                )
+                arrow = {"up": "⬆️ go higher", "down": "⬇️ go lower", "hit": "✅"}[direction]
+                st.sidebar.write(f"**{i}.** `{past_guess}` — {label} ({arrow})")
+                st.sidebar.progress(closeness)
+            else:
+                st.sidebar.write(f"**{i}.** `{past_guess}` — ⚠️ not a number")
+    else:
+        st.sidebar.caption("No guesses yet. Make your first guess!")
+
 st.subheader("Make a guess")
 
 st.info(
@@ -135,6 +161,9 @@ if new_game:
     st.rerun()
 
 if st.session_state.status != "playing":
+    # Render the history before stopping, otherwise the panel would be blank on
+    # a finished board (st.stop() halts the rerun before the call at the bottom).
+    render_guess_history()
     if st.session_state.status == "won":
         st.success("You already won. Start a new game to play again.")
     else:
@@ -187,6 +216,10 @@ if submit:
                     f"The secret was {st.session_state.secret}. "
                     f"Score: {st.session_state.score}"
                 )
+
+# Render the sidebar history AFTER the submit handler above has appended the
+# new guess, so a guess shows up on the same click instead of one click late.
+render_guess_history()
 
 st.divider()
 st.caption("Built by an AI that claims this code is production-ready.")

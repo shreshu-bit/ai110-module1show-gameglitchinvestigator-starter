@@ -8,17 +8,56 @@
 
 > Document your experience using an AI agent (e.g., Cursor Agent, Claude, Copilot) to make multi-step changes autonomously.
 
+**Feature implemented (Challenge 2):** a **Guess History sidebar** that lists every
+past guess and visualizes how close each one was to the secret number.
+
 **What task did you give the agent?**
 
-<!-- Describe the goal you asked the agent to accomplish -->
+I asked Claude (agent mode) to plan and implement a Guess History sidebar that,
+for each previous guess, shows the guessed value, a "hot/cold" closeness
+indicator with a progress bar, and which direction to move next. I asked it to
+keep the closeness math in a pure, testable function rather than burying it in
+the Streamlit UI code, and to add pytest cases for that function.
 
 **What did the agent do?**
 
-<!-- List the steps the agent took (files edited, commands run, etc.) -->
+Files modified:
+- `logic_utils.py` — added a pure `guess_proximity(guess, secret, low, high)`
+  function returning `(label, closeness, direction)`. Closeness is normalized to
+  the active difficulty range so it's clamped to `[0.0, 1.0]`.
+- `app.py` — imported `guess_proximity` and added a "Guess History 📜" section to
+  the sidebar that loops over `st.session_state.history`, renders each guess with
+  its label + `st.sidebar.progress(closeness)` bar + a ⬆️/⬇️ direction, and flags
+  invalid (non-number) guesses instead of scoring them.
+- `tests/test_game_logic.py` — added 6 tests for `guess_proximity` (exact guess,
+  direction up/down, closeness bounded in `[0,1]`, symmetry for equal distance,
+  and range normalization).
+
+Commands run: `python -m pytest tests/` to verify the suite (15 passed).
 
 **What did you have to verify or fix manually?**
 
-<!-- Describe anything the agent got wrong or that required human review -->
+The agent's first version of the range-normalization test asserted the wrong
+direction — it claimed a fixed distance of 10 should feel *warmer* on a narrow
+range (1–20) than a wide one (1–100). pytest caught it: the implementation is
+actually correct, because 10 out of 100 is a small fraction (closer) while 10 out
+of 20 is half the board (farther). I rejected the AI's assertion, corrected the
+test to expect `wide > narrow`, and re-ran the suite until all 15 passed. I also
+confirmed the sidebar handles invalid guesses already stored in `history` (the
+`isinstance(past_guess, int)` branch) so the proximity math never runs on a
+non-number, and verified `app.py` still parses and the app launches.
+
+The second correction came from running the app, not the tests. The agent first
+rendered the sidebar inline near the top of `app.py`, but Streamlit reruns the
+whole script top-to-bottom and the guess isn't appended to `history` until the
+submit handler near the bottom — so the panel always lagged one guess behind
+(my latest guess only appeared after I made the *next* one). I fixed this by
+moving the rendering into a `render_guess_history()` function and calling it
+*after* the submit handler appends the guess (plus once more before the
+game-over `st.stop()` so the panel still shows on a finished board). This was the
+same "Streamlit reruns top-to-bottom" lesson from the core bugs showing up again
+in my own feature — a reminder that unit tests pass but you still have to *run*
+a UI to catch ordering issues.
 
 ---
 

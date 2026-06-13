@@ -89,4 +89,11 @@ tests/test_game_logic.py::test_new_game_uses_difficulty_range_not_hardcoded_1_10
 
 ## 🚀 Stretch Features
 
+- [x] **Challenge 2 — Feature Expansion: Guess History sidebar.** Added a
+  "Guess History 📜" panel in the sidebar that lists every past guess with a
+  hot/cold closeness indicator (🔥/🌡️/😎/❄️), a progress bar showing how near it
+  was to the secret, and a ⬆️/⬇️ hint for which way to move next. The closeness
+  math lives in a pure, unit-tested `guess_proximity()` in
+  [logic_utils.py](logic_utils.py); see [ai_interactions.md](ai_interactions.md)
+  for the agent workflow.
 - [ ] [If you choose to complete Challenge 4, describe the Enhanced UI changes here — a screenshot is optional]

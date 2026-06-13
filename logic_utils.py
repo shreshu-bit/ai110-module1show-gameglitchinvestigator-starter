@@ -63,3 +63,37 @@ def check_guess(guess, secret):
 def update_score(current_score: int, outcome: str, attempt_number: int):
     """Update score based on outcome and attempt number."""
     raise NotImplementedError("Refactor this function from app.py into logic_utils.py")
+
+
+# FEATURE (Challenge 2): Guess History sidebar. Built agentically with Claude.
+# Pure function so the closeness math is unit-tested in tests/test_game_logic.py
+# and the app.py sidebar only handles rendering.
+def guess_proximity(guess, secret, low, high):
+    """Describe how close a guess is to the secret.
+
+    Returns (label, closeness, direction):
+      - label: a hot/cold string for how near the guess was
+      - closeness: float in [0.0, 1.0], where 1.0 means exact
+      - direction: "up" if the secret is higher than the guess, "down" if lower,
+        "hit" if exact (i.e. which way the player should move next)
+
+    closeness is normalized against the active (low, high) range so the same
+    distance feels equally "warm" on Easy (1-20) and Normal (1-100).
+    """
+    span = max(1, high - low)
+    distance = abs(guess - secret)
+    closeness = max(0.0, 1.0 - distance / span)
+
+    if distance == 0:
+        return "🎯 Exact!", 1.0, "hit"
+    if closeness >= 0.85:
+        label = "🔥 Burning hot"
+    elif closeness >= 0.6:
+        label = "🌡️ Warm"
+    elif closeness >= 0.35:
+        label = "😎 Cool"
+    else:
+        label = "❄️ Cold"
+
+    direction = "up" if secret > guess else "down"
+    return label, closeness, direction
