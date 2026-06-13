@@ -72,20 +72,36 @@ A sample game on **Normal** difficulty (range 1–100), where the secret is **63
 $ python -m pytest tests/ -v
 ============================= test session starts ==============================
 platform darwin -- Python 3.13.13, pytest-9.0.3, pluggy-1.6.0
-collected 9 items
+collected 21 items
 
-tests/test_game_logic.py::test_winning_guess PASSED                      [ 11%]
-tests/test_game_logic.py::test_guess_too_high PASSED                     [ 22%]
-tests/test_game_logic.py::test_guess_too_low PASSED                      [ 33%]
-tests/test_game_logic.py::test_too_high_tells_player_to_go_lower PASSED  [ 44%]
-tests/test_game_logic.py::test_too_low_tells_player_to_go_higher PASSED  [ 55%]
-tests/test_game_logic.py::test_new_game_resets_status_to_playing PASSED  [ 66%]
-tests/test_game_logic.py::test_new_game_clears_history PASSED            [ 77%]
-tests/test_game_logic.py::test_new_game_resets_attempts PASSED           [ 88%]
-tests/test_game_logic.py::test_new_game_uses_difficulty_range_not_hardcoded_1_100 PASSED [100%]
+tests/test_game_logic.py::test_winning_guess PASSED                      [  4%]
+tests/test_game_logic.py::test_guess_too_high PASSED                     [  9%]
+tests/test_game_logic.py::test_guess_too_low PASSED                      [ 14%]
+tests/test_game_logic.py::test_too_high_tells_player_to_go_lower PASSED  [ 19%]
+tests/test_game_logic.py::test_too_low_tells_player_to_go_higher PASSED  [ 23%]
+tests/test_game_logic.py::test_new_game_resets_status_to_playing PASSED  [ 28%]
+tests/test_game_logic.py::test_new_game_clears_history PASSED            [ 33%]
+tests/test_game_logic.py::test_new_game_resets_attempts PASSED           [ 38%]
+tests/test_game_logic.py::test_new_game_uses_difficulty_range_not_hardcoded_1_100 PASSED [ 42%]
+tests/test_game_logic.py::test_proximity_exact_guess_is_full_closeness_and_hit PASSED [ 47%]
+tests/test_game_logic.py::test_proximity_points_up_when_secret_is_higher PASSED [ 52%]
+tests/test_game_logic.py::test_proximity_points_down_when_secret_is_lower PASSED [ 57%]
+tests/test_game_logic.py::test_proximity_closeness_stays_between_0_and_1 PASSED [ 61%]
+tests/test_game_logic.py::test_proximity_is_symmetric_for_equal_distance PASSED [ 66%]
+tests/test_game_logic.py::test_proximity_is_normalized_to_range PASSED   [ 71%]
+tests/test_game_logic.py::test_parse_guess_empty_string_is_rejected PASSED [ 76%]
+tests/test_game_logic.py::test_parse_guess_none_is_rejected PASSED       [ 80%]
+tests/test_game_logic.py::test_parse_guess_non_numeric_text_is_rejected_without_raising PASSED [ 85%]
+tests/test_game_logic.py::test_parse_guess_accepts_negative_numbers PASSED [ 90%]
+tests/test_game_logic.py::test_parse_guess_truncates_decimal_strings PASSED [ 95%]
+tests/test_game_logic.py::test_parse_guess_whitespace_only_is_rejected PASSED [100%]
 
-============================== 9 passed in 0.00s ===============================
+============================== 21 passed in 0.01s ===============================
 ```
+
+The last six cases are **advanced edge-case tests** for `parse_guess` (empty string,
+`None`, non-numeric text, negative numbers, decimal strings, whitespace-only). See
+[ai_interactions.md](ai_interactions.md) for the prompts and rationale.
 
 ## 🚀 Stretch Features
 
@@ -96,4 +112,27 @@ tests/test_game_logic.py::test_new_game_uses_difficulty_range_not_hardcoded_1_10
   math lives in a pure, unit-tested `guess_proximity()` in
   [logic_utils.py](logic_utils.py); see [ai_interactions.md](ai_interactions.md)
   for the agent workflow.
-- [ ] [If you choose to complete Challenge 4, describe the Enhanced UI changes here — a screenshot is optional]
+- [x] **Challenge 1 — Advanced Edge-Case Testing.** Added six pytest cases for
+  `parse_guess` covering empty input, `None`, non-numeric text, negative numbers,
+  decimal strings, and whitespace-only. To make this testable, `parse_guess` (plus
+  `get_range_for_difficulty` and `update_score`) were moved out of `app.py` into
+  [logic_utils.py](logic_utils.py) as a single source of truth. Full passing output
+  is in the [Test Results](#-test-results) block above.
+
+- [x] **Challenge 3 — Professional Documentation & Style.** Added Google-style
+  docstrings to every function in [logic_utils.py](logic_utils.py) and brought the
+  code to PEP 8 (clean `flake8`, configured in [setup.cfg](setup.cfg)). The prompts,
+  the before/after linting output, and which suggestions were applied are recorded
+  in [ai_interactions.md](ai_interactions.md).
+
+- [x] **Challenge 4 — Enhanced Game UI.** Two structured UI upgrades make the game
+  easier to follow:
+  - A **📊 Session Summary table** in the main area (`render_session_summary()` in
+    [app.py](app.py)) recapping every attempt with its number, guess, result, and
+    hot/cold proximity.
+  - **Emoji hot/cold states and progress bars** in the Guess History sidebar
+    (`render_guess_history()`), plus the guess prompt now shows the *actual*
+    difficulty range (e.g. "between 1 and 20" on Easy) instead of a hardcoded
+    "1 and 100".
+
+  These improve readability without changing core game logic.
