@@ -105,6 +105,13 @@ The last six cases are **advanced edge-case tests** for `parse_guess` (empty str
 
 ## 🚀 Stretch Features
 
+- [x] **Challenge 1 — Advanced Edge-Case Testing.** Added six pytest cases for
+  `parse_guess` covering empty input, `None`, non-numeric text, negative numbers,
+  decimal strings, and whitespace-only. To make this testable, `parse_guess` (plus
+  `get_range_for_difficulty` and `update_score`) were moved out of `app.py` into
+  [logic_utils.py](logic_utils.py) as a single source of truth. Full passing output
+  is in the [Test Results](#-test-results) block above.
+  
 - [x] **Challenge 2 — Feature Expansion: Guess History sidebar.** Added a
   "Guess History 📜" panel in the sidebar that lists every past guess with a
   hot/cold closeness indicator (🔥/🌡️/😎/❄️), a progress bar showing how near it
@@ -112,12 +119,6 @@ The last six cases are **advanced edge-case tests** for `parse_guess` (empty str
   math lives in a pure, unit-tested `guess_proximity()` in
   [logic_utils.py](logic_utils.py); see [ai_interactions.md](ai_interactions.md)
   for the agent workflow.
-- [x] **Challenge 1 — Advanced Edge-Case Testing.** Added six pytest cases for
-  `parse_guess` covering empty input, `None`, non-numeric text, negative numbers,
-  decimal strings, and whitespace-only. To make this testable, `parse_guess` (plus
-  `get_range_for_difficulty` and `update_score`) were moved out of `app.py` into
-  [logic_utils.py](logic_utils.py) as a single source of truth. Full passing output
-  is in the [Test Results](#-test-results) block above.
 
 - [x] **Challenge 3 — Professional Documentation & Style.** Added Google-style
   docstrings to every function in [logic_utils.py](logic_utils.py) and brought the
