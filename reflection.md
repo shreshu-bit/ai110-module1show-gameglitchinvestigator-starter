@@ -59,8 +59,9 @@ was useful because it would fail the moment someone swapped the messages back â€
 it shows the fix is the wrong-message bug specifically, not just "some message
 appears." AI helped me design these tests: I asked Claude to suggest edge cases,
 and it recommended testing the *message text* (not just the "Too High"/"Too Low"
-label), which is what actually catches the swap bug. All 9 tests pass with
-`python -m pytest tests/`.
+label), which is what actually catches the swap bug. All 21 tests pass with
+`pytest` (the core-fix tests plus the proximity and edge-case suites I added
+for the stretch challenges).
 
 ---
 
